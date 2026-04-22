@@ -91,18 +91,14 @@ def run_model(df_input, scenario):
 
     df = df_input.copy()
 
-    # 🔥 KRİTİK DÜZELTME
+    # 🔥 SADECE HATA FIX
     df["Demand"] = pd.to_numeric(df["Demand"], errors="coerce")
-    df = df.dropna(subset=["Demand"])
+    df = df.dropna(subset=["Demand"]).reset_index(drop=True)
 
-    for i in range(len(df)):
-        if pd.isna(df.loc[i, "Demand"]):
-            continue
-
-        if scenario == "decrease":
-            df.loc[i, "Demand"] *= (0.9 ** i)
-        elif scenario == "increase":
-            df.loc[i, "Demand"] *= (1.1 ** i)
+    if scenario == "decrease":
+        df["Demand"] = df["Demand"] * (0.9 ** pd.Series(range(len(df))))
+    elif scenario == "increase":
+        df["Demand"] = df["Demand"] * (1.1 ** pd.Series(range(len(df))))
 
     carry = 0
     rows = []
