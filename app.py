@@ -91,18 +91,19 @@ def run_model(df_input, scenario):
 
     df = df_input.copy()
 
-    # 🔥 KRİTİK DÜZELTME
+    # 🔥 TYPE FIX
     df["Demand"] = pd.to_numeric(df["Demand"], errors="coerce")
-    df = df.dropna(subset=["Demand"])
+    df = df.dropna(subset=["Demand"]).reset_index(drop=True)
 
-    for i in range(len(df)):
-        if pd.isna(df.loc[i, "Demand"]):
+    # 🔥 INDEX SAFE LOOP
+    for idx in range(len(df)):
+        if pd.isna(df.loc[idx, "Demand"]):
             continue
 
         if scenario == "decrease":
-            df.loc[i, "Demand"] *= (0.9 ** i)
+            df.loc[idx, "Demand"] *= (0.9 ** idx)
         elif scenario == "increase":
-            df.loc[i, "Demand"] *= (1.1 ** i)
+            df.loc[idx, "Demand"] *= (1.1 ** idx)
 
     carry = 0
     rows = []
@@ -115,12 +116,7 @@ def run_model(df_input, scenario):
         if period.strip() == "":
             continue
 
-        raw_demand = df.loc[i, "Demand"]
-        if pd.isna(raw_demand):
-            continue
-
-        demand = float(raw_demand)
-        demand += carry
+        demand = float(df.loc[i, "Demand"]) + carry
 
         avg_scrap = sum([f["scrap"] for f in factory_states]) / len(factory_states)
         adjusted_demand = demand / (1 - avg_scrap) if avg_scrap < 1 else demand
@@ -135,10 +131,8 @@ def run_model(df_input, scenario):
             f["reg_cost_i"] = Decimal(str(f["reg_cost"])) * infl
             f["ot_cost_i"] = Decimal(str(f["ot_cost"])) * infl
 
-        stock_order = sorted(factory_states, key=lambda x: x["reg_cost_i"])
         used_stock = {}
-
-        for f in stock_order:
+        for f in sorted(factory_states, key=lambda x: x["reg_cost_i"]):
             used = min(f["stock"], remaining)
             used_stock[f["name"]] = used
             f["stock"] -= used
@@ -146,20 +140,16 @@ def run_model(df_input, scenario):
             if remaining <= 0:
                 break
 
-        reg_order = sorted(factory_states, key=lambda x: x["reg_cost_i"])
         used_reg = {}
-
-        for f in reg_order:
+        for f in sorted(factory_states, key=lambda x: x["reg_cost_i"]):
             used = min(f["reg_cap"], remaining)
             used_reg[f["name"]] = used
             remaining -= used
             if remaining <= 0:
                 break
 
-        ot_order = sorted(factory_states, key=lambda x: x["ot_cost_i"])
         used_ot = {}
-
-        for f in ot_order:
+        for f in sorted(factory_states, key=lambda x: x["ot_cost_i"]):
             used = min(f["ot_cap"], remaining)
             used_ot[f["name"]] = used
             remaining -= used
@@ -188,28 +178,17 @@ def run_model(df_input, scenario):
             period_cost += Decimal(str(used_ot.get(name, 0))) * f["ot_cost_i"]
 
         period_cost += Decimal(str(sub_used)) * Decimal(str(sub_cost)) * infl
-
         total_cost += period_cost
 
         row = {
             "Period": period,
             "Net Demand": demand,
             "Gross Production Need": adjusted_demand,
+            "Subcontract": sub_used,
+            "Shortage": shortage,
+            "Total Production": total_prod,
+            "Cost": float(period_cost)
         }
-
-        for f in stock_order:
-            row[f"{f['name']}_Stock"] = used_stock.get(f["name"], 0)
-
-        for f in reg_order:
-            row[f"{f['name']}_Reg"] = used_reg.get(f["name"], 0)
-
-        for f in ot_order:
-            row[f"{f['name']}_OT"] = used_ot.get(f["name"], 0)
-
-        row["Subcontract"] = sub_used
-        row["Shortage"] = shortage
-        row["Total Production"] = total_prod
-        row["Cost"] = float(period_cost)
 
         rows.append(row)
 
@@ -240,12 +219,5 @@ for tab, scenario, title in [
 
         st.metric("Total Cost", f"{total_cost:,.0f}")
 
-        numeric_cols = result.select_dtypes(include="number").columns
-        styled = result.style.format({col: "{:,.0f}" for col in numeric_cols})
-
-        for col in ["Total Production", "Cost"]:
-            if col in result.columns:
-                styled = styled.map(lambda x: "font-weight:bold", subset=[col])
-
-        st.dataframe(styled, width="stretch")
+        st.dataframe(result, width="stretch")
 
