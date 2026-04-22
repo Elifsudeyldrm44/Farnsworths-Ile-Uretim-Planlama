@@ -91,6 +91,10 @@ def run_model(df_input, scenario):
 
     df = df_input.copy()
 
+    # 🔥 KRİTİK DÜZELTME
+    df["Demand"] = pd.to_numeric(df["Demand"], errors="coerce")
+    df = df.dropna(subset=["Demand"])
+
     for i in range(len(df)):
         if pd.isna(df.loc[i, "Demand"]):
             continue
