@@ -48,7 +48,7 @@ for i in range(n_factories):
 # SUBCONTRACT
 # -----------------------------
 st.subheader("Subcontract")
-sub_cost = st.number_input("Subcontract Cost(TL/Ton)", value=1500.0)
+sub_cost = st.number_input("Subcontract Cost(TL/Ton)", value=15000.0)
 sub_cap = st.number_input("Subcontract Capacity(Ton/Ay)", value=0.0)
 
 # -----------------------------
