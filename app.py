@@ -234,13 +234,20 @@ for tab, scenario, title in [
 
         result, total_cost = run_model(df, scenario)
 
-        st.metric("Total Cost", f"{total_cost:,.0f}")
+        # Only display formatting changed: comma → dot
+        st.metric("Total Cost", f"{total_cost:,.0f}".replace(",", "."))
 
         numeric_cols = result.select_dtypes(include="number").columns
-        styled = result.style.format({col: "{:,.0f}" for col in numeric_cols})
+        styled = result.style.format({
+            col: lambda x: f"{x:,.0f}".replace(",", ".")
+            for col in numeric_cols
+        })
 
         for col in ["Total Production", "Cost"]:
             if col in result.columns:
-                styled = styled.map(lambda x: "font-weight:bold", subset=[col])
+                styled = styled.map(
+                    lambda x: "font-weight:bold",
+                    subset=[col]
+                )
 
         st.dataframe(styled, width="stretch")
