@@ -5,256 +5,291 @@ from decimal import Decimal, getcontext
 getcontext().prec = 28
 
 st.set_page_config(layout="wide")
-st.title("🏭 Production Planning (Multi-Factory)")
+st.title("🏭 Üretim Planlama (Çoklu Fabrika)")
 
 
 # =========================================================
-# NUMBER FORMATTING
+# SAYI BİÇİMLENDİRME
 # =========================================================
 
-def format_tr_number(value):
+def sayi_formatla(deger):
     """
-    Format number with Turkish-style thousand separator.
+    Sayıları binlik ayraç olarak nokta kullanarak gösterir.
 
-    Examples:
-    6600       -> 6.600
-    8300       -> 8.300
-    1232       -> 1.232
-    1232000    -> 1.232.000
+    Örnekler:
+    6600 -> 6.600
+    8300 -> 8.300
+    1232 -> 1.232
+    1232000 -> 1.232.000
     """
 
-    if value is None:
+    if deger is None:
         return ""
 
     try:
-        number = float(value)
-        return f"{number:,.0f}".replace(",", ".")
+        sayi = float(deger)
+        return f"{sayi:,.0f}".replace(",", ".")
     except:
-        return str(value)
+        return str(deger)
 
 
-def parse_tr_number(value):
+def sayi_coz(deger):
     """
-    Convert displayed Turkish-style number into Python number.
+    Formatlanmış sayıları Python sayısına dönüştürür.
 
-    Examples:
-    6.600       -> 6600
-    8.300       -> 8300
-    1.232       -> 1232
-    1.232.000   -> 1232000
+    Örnekler:
+    6.600 -> 6600
+    8.300 -> 8300
+    1.232 -> 1232
+    1.232.000 -> 1232000
     """
 
-    if value is None:
+    if deger is None:
         return 0.0
 
-    value = str(value).strip()
+    deger = str(deger).strip()
 
-    if value == "":
+    if deger == "":
         return 0.0
 
-    # Remove thousand separators
-    value = value.replace(".", "")
+    deger = deger.replace(".", "")
 
     try:
-        return float(value)
+        return float(deger)
     except:
         return 0.0
 
 
 # =========================================================
-# FORMATTED INPUT
+# FORMATLANMIŞ GİRİŞ
 # =========================================================
 
-def format_input_value(key):
-    """
-    Automatically add thousand separators when
-    the user changes an input.
-    """
+def giris_degerini_formatla(anahtar):
 
-    value = st.session_state.get(key, "")
+    deger = st.session_state.get(
+        anahtar,
+        ""
+    )
 
-    if value is None:
+    if deger is None:
         return
 
-    value = str(value).strip()
+    deger = str(deger).strip()
 
-    if value == "":
+    if deger == "":
         return
 
     try:
-        number = parse_tr_number(value)
-        st.session_state[key] = format_tr_number(number)
+
+        sayi = sayi_coz(deger)
+
+        st.session_state[
+            anahtar
+        ] = sayi_formatla(sayi)
+
     except:
         pass
 
 
-def formatted_number_input(label, value, key):
+def formatli_sayi_girisi(
+    etiket,
+    deger,
+    anahtar
+):
 
-    # Set initial value only once
-    if key not in st.session_state:
-        st.session_state[key] = format_tr_number(value)
+    if anahtar not in st.session_state:
+
+        st.session_state[
+            anahtar
+        ] = sayi_formatla(deger)
 
     st.text_input(
-        label,
-        key=key,
-        on_change=format_input_value,
-        args=(key,)
+        etiket,
+        key=anahtar,
+        on_change=giris_degerini_formatla,
+        args=(anahtar,)
     )
 
-    return parse_tr_number(
-        st.session_state[key]
+    return sayi_coz(
+        st.session_state[anahtar]
     )
 
 
 # =========================================================
-# FACTORY COUNT
+# FABRİKA SAYISI
 # =========================================================
 
-n_factories = st.number_input(
-    "Number of Factories",
+fabrika_sayisi = st.number_input(
+    "Fabrika Sayısı",
     min_value=1,
     value=2,
     step=1
 )
 
-factories = []
+fabrikalar = []
 
 
 # =========================================================
-# FACTORY INPUTS
+# FABRİKA GİRDİLERİ
 # =========================================================
 
-st.subheader("Factory Inputs")
+st.subheader("Fabrika Girdileri")
 
-cols = st.columns(n_factories)
+sutunlar = st.columns(
+    fabrika_sayisi
+)
 
-for i in range(n_factories):
+for i in range(fabrika_sayisi):
 
-    with cols[i]:
+    with sutunlar[i]:
 
-        name = st.text_input(
-            f"Factory {i+1} Name",
-            value=f"F{i+1}",
-            key=f"name_{i}"
+        fabrika_adi = st.text_input(
+            f"{i+1}. Fabrika Adı",
+            value=f"Fabrika {i+1}",
+            key=f"fabrika_adi_{i}"
         )
 
-        # -------------------------
-        # REGULAR COST
-        # -------------------------
 
-        reg_cost = formatted_number_input(
-            f"{name} Regular Cost(TL/Ton)",
+        # -------------------------------------------------
+        # NORMAL ÜRETİM MALİYETİ
+        # -------------------------------------------------
+
+        normal_maliyet = formatli_sayi_girisi(
+            f"{fabrika_adi} Normal Üretim Maliyeti (TL/Ton)",
             6600,
-            key=f"reg_cost_{i}"
+            anahtar=f"normal_maliyet_{i}"
         )
 
-        # -------------------------
-        # OVERTIME COST
-        # -------------------------
 
-        ot_cost = formatted_number_input(
-            f"{name} Overtime Cost(TL/Ton)",
+        # -------------------------------------------------
+        # FAZLA MESAİ MALİYETİ
+        # -------------------------------------------------
+
+        fazla_mesai_maliyeti = formatli_sayi_girisi(
+            f"{fabrika_adi} Fazla Mesai Maliyeti (TL/Ton)",
             9900,
-            key=f"ot_cost_{i}"
+            anahtar=f"fazla_mesai_maliyeti_{i}"
         )
 
-        # -------------------------
-        # REGULAR CAPACITY
-        # -------------------------
 
-        reg_cap = formatted_number_input(
-            f"{name} Regular Capacity(Ton/Ay)",
+        # -------------------------------------------------
+        # NORMAL ÜRETİM KAPASİTESİ
+        # -------------------------------------------------
+
+        normal_kapasite = formatli_sayi_girisi(
+            f"{fabrika_adi} Normal Üretim Kapasitesi (Ton/Ay)",
             510,
-            key=f"reg_cap_{i}"
+            anahtar=f"normal_kapasite_{i}"
         )
 
-        # -------------------------
-        # OVERTIME CAPACITY
-        # -------------------------
 
-        ot_cap = formatted_number_input(
-            f"{name} Overtime Capacity(Ton/Ay)",
+        # -------------------------------------------------
+        # FAZLA MESAİ KAPASİTESİ
+        # -------------------------------------------------
+
+        fazla_mesai_kapasitesi = formatli_sayi_girisi(
+            f"{fabrika_adi} Fazla Mesai Kapasitesi (Ton/Ay)",
             400,
-            key=f"ot_cap_{i}"
+            anahtar=f"fazla_mesai_kapasitesi_{i}"
         )
 
-        # -------------------------
-        # STOCK
-        # -------------------------
 
-        stock = formatted_number_input(
-            f"{name} Stock(Ton)",
+        # -------------------------------------------------
+        # STOK
+        # -------------------------------------------------
+
+        stok = formatli_sayi_girisi(
+            f"{fabrika_adi} Stok (Ton)",
             75,
-            key=f"stock_{i}"
+            anahtar=f"stok_{i}"
         )
 
-        # -------------------------
-        # SCRAP
-        # -------------------------
 
-        scrap = formatted_number_input(
-            f"{name} Scrap (%)",
+        # -------------------------------------------------
+        # HURDA ORANI
+        # -------------------------------------------------
+
+        hurda_orani = formatli_sayi_girisi(
+            f"{fabrika_adi} Hurda Oranı (%)",
             5,
-            key=f"scrap_{i}"
+            anahtar=f"hurda_orani_{i}"
         ) / 100
 
-        factories.append({
-            "name": name,
-            "reg_cost": reg_cost,
-            "ot_cost": ot_cost,
-            "reg_cap": reg_cap,
-            "ot_cap": ot_cap,
-            "stock": stock,
-            "scrap": scrap
+
+        fabrikalar.append({
+
+            "adi": fabrika_adi,
+
+            "normal_maliyet":
+                normal_maliyet,
+
+            "fazla_mesai_maliyeti":
+                fazla_mesai_maliyeti,
+
+            "normal_kapasite":
+                normal_kapasite,
+
+            "fazla_mesai_kapasitesi":
+                fazla_mesai_kapasitesi,
+
+            "stok":
+                stok,
+
+            "hurda":
+                hurda_orani
         })
 
 
 # =========================================================
-# SUBCONTRACT
+# FASON ÜRETİM
 # =========================================================
 
-st.subheader("Subcontract")
+st.subheader("Fason Üretim")
 
-sub_cost = formatted_number_input(
-    "Subcontract Cost(TL/Ton)",
+fason_maliyeti = formatli_sayi_girisi(
+    "Fason Üretim Maliyeti (TL/Ton)",
     15000,
-    key="sub_cost"
+    anahtar="fason_maliyeti"
 )
 
-sub_cap = formatted_number_input(
-    "Subcontract Capacity(Ton/Ay)",
+fason_kapasitesi = formatli_sayi_girisi(
+    "Fason Üretim Kapasitesi (Ton/Ay)",
     0,
-    key="sub_cap"
+    anahtar="fason_kapasitesi"
 )
 
 
 # =========================================================
-# INFLATION
+# ENFLASYON
 # =========================================================
 
-st.subheader("Inflation")
+st.subheader("Enflasyon")
 
-use_inflation = st.checkbox(
-    "Apply Inflation"
+enflasyon_uygula = st.checkbox(
+    "Enflasyonu Uygula"
 )
 
-inflation_input = formatted_number_input(
-    "Monthly Inflation (%)",
+aylik_enflasyon = formatli_sayi_girisi(
+    "Aylık Enflasyon (%)",
     2,
-    key="inflation_input"
+    anahtar="aylik_enflasyon"
 )
 
-inflation_rate = inflation_input / 100
+enflasyon_orani = (
+    aylik_enflasyon / 100
+)
 
 
 # =========================================================
-# DEMAND
+# TALEP
 # =========================================================
 
-st.subheader("Demand")
+st.subheader("Talep")
 
-default = pd.DataFrame({
-    "Period": [
+varsayilan_talep = pd.DataFrame({
+
+    "Dönem": [
+
         "Ocak",
         "Şubat",
         "Mart",
@@ -267,9 +302,11 @@ default = pd.DataFrame({
         "Ekim",
         "Kasım",
         "Aralık"
+
     ],
 
-    "Demand": [
+    "Talep": [
+
         "1.500",
         "1.578",
         "1.670",
@@ -282,569 +319,818 @@ default = pd.DataFrame({
         "1.710",
         "1.686",
         "1.794"
+
     ]
 })
 
 
 # =========================================================
-# DEMAND FORMAT CALLBACK
+# TALEP TABLOSU FORMATLAMA
 # =========================================================
 
-def format_demand_table():
+def talep_tablosunu_formatla():
 
-    if "demand_editor" not in st.session_state:
+    if "talep_editoru" not in st.session_state:
         return
 
-    data = st.session_state["demand_editor"]
+    veri = st.session_state[
+        "talep_editoru"
+    ]
 
-    if isinstance(data, pd.DataFrame):
+    if isinstance(veri, pd.DataFrame):
 
-        data = data.copy()
+        veri = veri.copy()
 
-        if "Demand" in data.columns:
+        if "Talep" in veri.columns:
 
-            formatted_values = []
+            formatlanmis_degerler = []
 
-            for value in data["Demand"]:
+            for deger in veri["Talep"]:
 
-                if value is None or str(value).strip() == "":
-                    formatted_values.append("")
+                if (
+                    deger is None
+                    or str(deger).strip() == ""
+                ):
+
+                    formatlanmis_degerler.append("")
+
                     continue
 
                 try:
-                    number = parse_tr_number(value)
-                    formatted_values.append(
-                        format_tr_number(number)
+
+                    sayi = sayi_coz(deger)
+
+                    formatlanmis_degerler.append(
+                        sayi_formatla(sayi)
                     )
+
                 except:
-                    formatted_values.append(value)
 
-            data["Demand"] = formatted_values
+                    formatlanmis_degerler.append(
+                        deger
+                    )
 
-            st.session_state["demand_editor"] = data
+            veri["Talep"] = (
+                formatlanmis_degerler
+            )
+
+            st.session_state[
+                "talep_editoru"
+            ] = veri
 
 
 # =========================================================
-# DEMAND TABLE
+# TALEP TABLOSU
 # =========================================================
 
-df = st.data_editor(
-    default,
+talep_verisi = st.data_editor(
+    varsayilan_talep,
     num_rows="dynamic",
     width="stretch",
-    key="demand_editor",
-    on_change=format_demand_table
+    key="talep_editoru",
+    on_change=talep_tablosunu_formatla
 )
 
 
 # =========================================================
-# BACKORDER
+# SİPARİŞ ERTELEME
 # =========================================================
 
-bo_flags = []
+erteleme_isaretleri = []
 
-for i in range(len(df)):
+for i in range(len(talep_verisi)):
 
-    period_name = str(
-        df.loc[i, "Period"]
+    donem_adi = str(
+        talep_verisi.loc[
+            i,
+            "Dönem"
+        ]
     )
 
-    if period_name.strip() == "":
+    if donem_adi.strip() == "":
 
-        bo_flags.append(False)
+        erteleme_isaretleri.append(
+            False
+        )
 
     else:
 
-        flag = st.checkbox(
-            f"{period_name} → carry over",
-            key=f"bo_{i}"
+        isaret = st.checkbox(
+            f"{donem_adi} → Sonraki Döneme Aktar",
+            key=f"erteleme_{i}"
         )
 
-        bo_flags.append(flag)
+        erteleme_isaretleri.append(
+            isaret
+        )
 
 
 # =========================================================
-# MODEL
+# ÜRETİM MODELİ
 # =========================================================
 
-def run_model(df_input, scenario):
+def modeli_calistir(
+    talep_girdisi,
+    senaryo
+):
 
-    df = df_input.copy()
+    veri = talep_girdisi.copy()
 
-    # Convert Turkish formatted Demand
-    df["Demand"] = df["Demand"].apply(
-        parse_tr_number
+
+    # -----------------------------------------------------
+    # TALEP DEĞERLERİNİ SAYIYA ÇEVİR
+    # -----------------------------------------------------
+
+    veri["Talep"] = (
+        veri["Talep"]
+        .apply(sayi_coz)
     )
 
-    df = df.dropna(
-        subset=["Demand"]
+    veri = veri.dropna(
+        subset=["Talep"]
     ).reset_index(drop=True)
 
-    # -------------------------
-    # DEMAND SCENARIOS
-    # -------------------------
 
-    if scenario == "decrease":
+    # -----------------------------------------------------
+    # TALEP SENARYOSU
+    # -----------------------------------------------------
 
-        df["Demand"] = (
-            df["Demand"]
+    if senaryo == "azalis":
+
+        veri["Talep"] = (
+            veri["Talep"]
             * (
                 0.9
                 ** pd.Series(
-                    range(len(df))
+                    range(len(veri))
                 )
             )
         )
 
-    elif scenario == "increase":
+    elif senaryo == "artis":
 
-        df["Demand"] = (
-            df["Demand"]
+        veri["Talep"] = (
+            veri["Talep"]
             * (
                 1.1
                 ** pd.Series(
-                    range(len(df))
+                    range(len(veri))
                 )
             )
         )
 
-    # -------------------------
-    # INITIAL VALUES
-    # -------------------------
 
-    carry = 0
+    sonraki_doneme_aktarilan = 0
 
-    rows = []
+    sonuclar = []
 
-    total_cost = Decimal(0)
+    toplam_maliyet = Decimal(0)
 
-    factory_states = [
-        f.copy()
-        for f in factories
+    fabrika_durumlari = [
+
+        fabrika.copy()
+
+        for fabrika in fabrikalar
+
     ]
 
+
     # =====================================================
-    # PERIOD LOOP
+    # DÖNEM HESAPLAMASI
     # =====================================================
 
-    for i in range(len(df)):
+    for i in range(len(veri)):
 
-        period = str(
-            df.loc[i, "Period"]
+        donem = str(
+            veri.loc[
+                i,
+                "Dönem"
+            ]
         )
 
-        if period.strip() == "":
+        if donem.strip() == "":
             continue
 
-        raw_demand = df.loc[i, "Demand"]
+        ham_talep = veri.loc[
+            i,
+            "Talep"
+        ]
 
-        if pd.isna(raw_demand):
+        if pd.isna(ham_talep):
             continue
 
-        demand = float(raw_demand)
+        talep = float(
+            ham_talep
+        )
 
-        demand += carry
+        talep += (
+            sonraki_doneme_aktarilan
+        )
 
-        # -------------------------
-        # SCRAP
-        # -------------------------
 
-        avg_scrap = (
+        # -------------------------------------------------
+        # HURDA DÜZELTMESİ
+        # -------------------------------------------------
+
+        ortalama_hurda = (
+
             sum(
-                f["scrap"]
-                for f in factory_states
+                fabrika["hurda"]
+                for fabrika
+                in fabrika_durumlari
             )
-            / len(factory_states)
+
+            / len(
+                fabrika_durumlari
+            )
         )
 
-        adjusted_demand = (
-            demand / (1 - avg_scrap)
-            if avg_scrap < 1
-            else demand
+
+        duzeltilmis_talep = (
+
+            talep
+            / (
+                1 - ortalama_hurda
+            )
+
+            if ortalama_hurda < 1
+
+            else talep
         )
 
-        remaining = adjusted_demand
 
-        # -------------------------
-        # INFLATION
-        # -------------------------
+        kalan = duzeltilmis_talep
 
-        infl = Decimal(1)
 
-        if use_inflation:
+        # -------------------------------------------------
+        # ENFLASYON
+        # -------------------------------------------------
 
-            infl = (
+        enflasyon_carpani = Decimal(1)
+
+        if enflasyon_uygula:
+
+            enflasyon_carpani = (
+
                 Decimal(1)
+
                 + Decimal(
-                    str(inflation_rate)
+                    str(
+                        enflasyon_orani
+                    )
                 )
+
             ) ** Decimal(i)
 
-        # -------------------------
-        # INFLATED COSTS
-        # -------------------------
 
-        for f in factory_states:
+        # -------------------------------------------------
+        # GÜNCELLENMİŞ MALİYETLER
+        # -------------------------------------------------
 
-            f["reg_cost_i"] = (
+        for fabrika in fabrika_durumlari:
+
+            fabrika[
+                "normal_maliyet_guncel"
+            ] = (
+
                 Decimal(
-                    str(f["reg_cost"])
+                    str(
+                        fabrika[
+                            "normal_maliyet"
+                        ]
+                    )
                 )
-                * infl
+
+                * enflasyon_carpani
             )
 
-            f["ot_cost_i"] = (
+
+            fabrika[
+                "fazla_mesai_maliyeti_guncel"
+            ] = (
+
                 Decimal(
-                    str(f["ot_cost"])
+                    str(
+                        fabrika[
+                            "fazla_mesai_maliyeti"
+                        ]
+                    )
                 )
-                * infl
+
+                * enflasyon_carpani
             )
 
+
         # =================================================
-        # STOCK
+        # STOK
         # =================================================
 
-        stock_order = sorted(
-            factory_states,
-            key=lambda x: x["reg_cost_i"]
+        stok_sirasi = sorted(
+
+            fabrika_durumlari,
+
+            key=lambda x:
+                x[
+                    "normal_maliyet_guncel"
+                ]
         )
 
-        used_stock = {}
+        kullanilan_stok = {}
 
-        for f in stock_order:
+        for fabrika in stok_sirasi:
 
-            used = min(
-                f["stock"],
-                remaining
+            kullanilan = min(
+
+                fabrika["stok"],
+
+                kalan
             )
 
-            used_stock[f["name"]] = used
+            kullanilan_stok[
+                fabrika["adi"]
+            ] = kullanilan
 
-            f["stock"] -= used
+            fabrika["stok"] -= (
+                kullanilan
+            )
 
-            remaining -= used
+            kalan -= kullanilan
 
-            if remaining <= 0:
+            if kalan <= 0:
                 break
 
+
         # =================================================
-        # REGULAR PRODUCTION
+        # NORMAL ÜRETİM
         # =================================================
 
-        reg_order = sorted(
-            factory_states,
-            key=lambda x: x["reg_cost_i"]
+        normal_uretim_sirasi = sorted(
+
+            fabrika_durumlari,
+
+            key=lambda x:
+                x[
+                    "normal_maliyet_guncel"
+                ]
         )
 
-        used_reg = {}
+        kullanilan_normal_uretim = {}
 
-        for f in reg_order:
+        for fabrika in normal_uretim_sirasi:
 
-            used = min(
-                f["reg_cap"],
-                remaining
+            kullanilan = min(
+
+                fabrika[
+                    "normal_kapasite"
+                ],
+
+                kalan
             )
 
-            used_reg[f["name"]] = used
+            kullanilan_normal_uretim[
+                fabrika["adi"]
+            ] = kullanilan
 
-            remaining -= used
+            kalan -= kullanilan
 
-            if remaining <= 0:
+            if kalan <= 0:
                 break
 
+
         # =================================================
-        # OVERTIME
+        # FAZLA MESAİ
         # =================================================
 
-        ot_order = sorted(
-            factory_states,
-            key=lambda x: x["ot_cost_i"]
+        fazla_mesai_sirasi = sorted(
+
+            fabrika_durumlari,
+
+            key=lambda x:
+                x[
+                    "fazla_mesai_maliyeti_guncel"
+                ]
         )
 
-        used_ot = {}
+        kullanilan_fazla_mesai = {}
 
-        for f in ot_order:
+        for fabrika in fazla_mesai_sirasi:
 
-            used = min(
-                f["ot_cap"],
-                remaining
+            kullanilan = min(
+
+                fabrika[
+                    "fazla_mesai_kapasitesi"
+                ],
+
+                kalan
             )
 
-            used_ot[f["name"]] = used
+            kullanilan_fazla_mesai[
+                fabrika["adi"]
+            ] = kullanilan
 
-            remaining -= used
+            kalan -= kullanilan
 
-            if remaining <= 0:
+            if kalan <= 0:
                 break
 
+
         # =================================================
-        # SUBCONTRACT
+        # FASON ÜRETİM
         # =================================================
 
-        sub_used = min(
-            sub_cap,
-            remaining
+        fason_kullanimi = min(
+
+            fason_kapasitesi,
+
+            kalan
         )
 
-        remaining -= sub_used
+        kalan -= fason_kullanimi
 
-        # -------------------------
-        # SHORTAGE
-        # -------------------------
 
-        shortage = max(
+        # =================================================
+        # KARŞILANAMAYAN TALEP
+        # =================================================
+
+        acik = max(
             0,
-            remaining
+            kalan
         )
 
+
         # =================================================
-        # BACKORDER
+        # SONRAKİ DÖNEME AKTARMA
         # =================================================
 
         if (
-            i < len(df) - 1
-            and bo_flags[i]
+
+            i < len(veri) - 1
+
+            and erteleme_isaretleri[i]
+
         ):
 
-            carry = shortage
+            sonraki_doneme_aktarilan = (
+                acik
+            )
 
-            shortage = 0
+            acik = 0
 
         else:
 
-            carry = 0
+            sonraki_doneme_aktarilan = 0
+
 
         # =================================================
-        # TOTAL PRODUCTION
+        # TOPLAM ÜRETİM
         # =================================================
 
-        total_prod = (
-            sum(used_stock.values())
-            + sum(used_reg.values())
-            + sum(used_ot.values())
-            + sub_used
+        toplam_uretim = (
+
+            sum(
+                kullanilan_stok.values()
+            )
+
+            + sum(
+                kullanilan_normal_uretim.values()
+            )
+
+            + sum(
+                kullanilan_fazla_mesai.values()
+            )
+
+            + fason_kullanimi
+
         )
 
+
         # =================================================
-        # COST
+        # MALİYET HESAPLAMA
         # =================================================
 
-        period_cost = Decimal(0)
+        donem_maliyeti = Decimal(0)
 
-        for f in factory_states:
+        for fabrika in fabrika_durumlari:
 
-            name = f["name"]
+            fabrika_adi = (
+                fabrika["adi"]
+            )
 
-            # Stock cost
-            period_cost += (
+
+            # Stok maliyeti
+            donem_maliyeti += (
+
                 Decimal(
                     str(
-                        used_stock.get(
-                            name,
+                        kullanilan_stok.get(
+                            fabrika_adi,
                             0
                         )
                     )
                 )
-                * f["reg_cost_i"]
+
+                * fabrika[
+                    "normal_maliyet_guncel"
+                ]
+
             )
 
-            # Regular cost
-            period_cost += (
+
+            # Normal üretim maliyeti
+            donem_maliyeti += (
+
                 Decimal(
                     str(
-                        used_reg.get(
-                            name,
+                        kullanilan_normal_uretim.get(
+                            fabrika_adi,
                             0
                         )
                     )
                 )
-                * f["reg_cost_i"]
+
+                * fabrika[
+                    "normal_maliyet_guncel"
+                ]
+
             )
 
-            # Overtime cost
-            period_cost += (
+
+            # Fazla mesai maliyeti
+            donem_maliyeti += (
+
                 Decimal(
                     str(
-                        used_ot.get(
-                            name,
+                        kullanilan_fazla_mesai.get(
+                            fabrika_adi,
                             0
                         )
                     )
                 )
-                * f["ot_cost_i"]
+
+                * fabrika[
+                    "fazla_mesai_maliyeti_guncel"
+                ]
+
             )
 
-        # Subcontract cost
-        period_cost += (
+
+        # Fason üretim maliyeti
+        donem_maliyeti += (
+
             Decimal(
-                str(sub_used)
+                str(
+                    fason_kullanimi
+                )
             )
+
             * Decimal(
-                str(sub_cost)
+                str(
+                    fason_maliyeti
+                )
             )
-            * infl
+
+            * enflasyon_carpani
+
         )
 
-        total_cost += period_cost
+
+        toplam_maliyet += (
+            donem_maliyeti
+        )
+
 
         # =================================================
-        # RESULT ROW
+        # SONUÇ SATIRI
         # =================================================
 
-        row = {
-            "Period": period,
-            "Net Demand": demand,
-            "Gross Production Need": adjusted_demand
+        satir = {
+
+            "Dönem":
+                donem,
+
+            "Net Talep":
+                talep,
+
+            "Brüt Üretim İhtiyacı":
+                duzeltilmis_talep
+
         }
 
-        # Stock
-        for f in stock_order:
 
-            row[
-                f"{f['name']}_Stock"
-            ] = used_stock.get(
-                f["name"],
+        # Stok sonuçları
+        for fabrika in stok_sirasi:
+
+            satir[
+                f"{fabrika['adi']}_Stok"
+            ] = kullanilan_stok.get(
+
+                fabrika["adi"],
+
                 0
+
             )
 
-        # Regular
-        for f in reg_order:
 
-            row[
-                f"{f['name']}_Reg"
-            ] = used_reg.get(
-                f["name"],
+        # Normal üretim sonuçları
+        for fabrika in normal_uretim_sirasi:
+
+            satir[
+                f"{fabrika['adi']}_Normal"
+            ] = kullanilan_normal_uretim.get(
+
+                fabrika["adi"],
+
                 0
+
             )
 
-        # Overtime
-        for f in ot_order:
 
-            row[
-                f"{f['name']}_OT"
-            ] = used_ot.get(
-                f["name"],
+        # Fazla mesai sonuçları
+        for fabrika in fazla_mesai_sirasi:
+
+            satir[
+                f"{fabrika['adi']}_Fazla Mesai"
+            ] = kullanilan_fazla_mesai.get(
+
+                fabrika["adi"],
+
                 0
+
             )
 
-        row["Subcontract"] = sub_used
 
-        row["Shortage"] = shortage
+        satir[
+            "Fason Üretim"
+        ] = fason_kullanimi
 
-        row["Total Production"] = total_prod
+        satir[
+            "Açık"
+        ] = acik
 
-        row["Cost"] = float(
-            period_cost
+        satir[
+            "Toplam Üretim"
+        ] = toplam_uretim
+
+        satir[
+            "Maliyet"
+        ] = float(
+            donem_maliyeti
         )
 
-        rows.append(row)
+        sonuclar.append(
+            satir
+        )
+
 
     return (
-        pd.DataFrame(rows),
-        float(total_cost)
+
+        pd.DataFrame(sonuclar),
+
+        float(toplam_maliyet)
+
     )
 
 
 # =========================================================
-# RESULTS
+# SONUÇLAR
 # =========================================================
 
 st.divider()
 
-st.header("Results")
+st.header("Sonuçlar")
 
-tab1, tab2, tab3 = st.tabs([
-    "Base Scenario",
-    "Demand Decreasing (-10%)",
-    "Demand Increasing (+10%)"
+
+sekme1, sekme2, sekme3 = st.tabs([
+
+    "Temel Senaryo",
+
+    "Azalan Talep (-%10)",
+
+    "Artan Talep (+%10)"
+
 ])
 
 
 # =========================================================
-# SCENARIOS
+# SENARYO SONUÇLARI
 # =========================================================
 
-for tab, scenario, title in [
+for sekme, senaryo, baslik in [
 
     (
-        tab1,
+        sekme1,
         "normal",
-        "Base Scenario"
+        "Temel Senaryo"
     ),
 
     (
-        tab2,
-        "decrease",
-        "Demand Decreasing"
+        sekme2,
+        "azalis",
+        "Azalan Talep"
     ),
 
     (
-        tab3,
-        "increase",
-        "Demand Increasing"
+        sekme3,
+        "artis",
+        "Artan Talep"
     )
 
 ]:
 
-    with tab:
+    with sekme:
 
-        st.subheader(title)
-
-        result, total_cost = run_model(
-            df,
-            scenario
+        st.subheader(
+            baslik
         )
 
-        # =================================================
-        # TOTAL COST
-        # =================================================
 
-        st.metric(
-            "Total Cost",
-            format_tr_number(
-                total_cost
+        sonuc, toplam_maliyet = (
+            modeli_calistir(
+                talep_verisi,
+                senaryo
             )
         )
 
-        # =================================================
-        # RESULT TABLE
-        # =================================================
 
-        numeric_cols = (
-            result
+        # -------------------------------------------------
+        # TOPLAM MALİYET
+        # -------------------------------------------------
+
+        st.metric(
+
+            "Toplam Maliyet",
+
+            sayi_formatla(
+                toplam_maliyet
+            )
+
+        )
+
+
+        # -------------------------------------------------
+        # SONUÇ TABLOSU
+        # -------------------------------------------------
+
+        sayisal_sutunlar = (
+
+            sonuc
+
             .select_dtypes(
                 include="number"
             )
+
             .columns
+
         )
 
-        styled = result.style.format({
 
-            col: lambda x:
-                format_tr_number(x)
+        formatlanmis_sonuc = (
+            sonuc.style.format({
 
-            for col in numeric_cols
+                sutun:
 
-        })
+                    lambda deger:
+                        sayi_formatla(
+                            deger
+                        )
 
-        # =================================================
-        # BOLD COLUMNS
-        # =================================================
+                for sutun
+                in sayisal_sutunlar
 
-        for col in [
-            "Total Production",
-            "Cost"
+            })
+        )
+
+
+        # -------------------------------------------------
+        # VURGULANACAK SÜTUNLAR
+        # -------------------------------------------------
+
+        for sutun in [
+
+            "Toplam Üretim",
+
+            "Maliyet"
+
         ]:
 
-            if col in result.columns:
+            if sutun in sonuc.columns:
 
-                styled = styled.map(
-                    lambda x:
-                        "font-weight:bold",
-                    subset=[col]
+                formatlanmis_sonuc = (
+                    formatlanmis_sonuc.map(
+
+                        lambda deger:
+                            "font-weight:bold",
+
+                        subset=[sutun]
+
+                    )
                 )
 
+
         st.dataframe(
-            styled,
+
+            formatlanmis_sonuc,
+
             width="stretch"
+
         )
