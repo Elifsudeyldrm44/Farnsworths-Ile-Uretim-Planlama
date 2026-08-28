@@ -11,29 +11,36 @@ st.title("🏭 Production Planning (Multi-Factory)")
 # -----------------------------
 # NUMBER FORMATTING
 # -----------------------------
-def format_tr_number(value, decimals=2):
+def format_tr_number(value):
     """
-    Format numbers using Turkish style:
-    6600.00 -> 6.600,00
+    Display numbers with dot as thousand separator.
+    No decimal places.
+    
+    Examples:
+    6600 -> 6.600
     1500 -> 1.500
+    1250000 -> 1.250.000
     """
     if value is None:
         return ""
 
     try:
         value = float(value)
-        formatted = f"{value:,.{decimals}f}"
-        return formatted.replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"{value:,.0f}".replace(",", ".")
     except:
         return str(value)
 
 
 def parse_tr_number(value):
     """
-    Convert Turkish-style numbers back to Python numbers:
-    6.600,00 -> 6600.00
-    1.500 -> 1500.00
+    Convert Turkish-style numbers to Python numbers.
+
+    Examples:
+    6.600 -> 6600
+    1.500 -> 1500
+    1.250.000 -> 1250000
     """
+
     if value is None:
         return 0.0
 
@@ -42,12 +49,8 @@ def parse_tr_number(value):
     if value == "":
         return 0.0
 
-    # Turkish format: 6.600,00
-    if "," in value:
-        value = value.replace(".", "").replace(",", ".")
-    else:
-        # Integer with thousand separator: 1.500 -> 1500
-        value = value.replace(".", "")
+    # Remove thousand separators
+    value = value.replace(".", "")
 
     try:
         return float(value)
@@ -55,13 +58,14 @@ def parse_tr_number(value):
         return 0.0
 
 
-def formatted_number_input(label, value, key, decimals=2):
+def formatted_number_input(label, value, key):
     """
-    Text input that displays numbers in Turkish format.
+    Text input with dot as thousand separator.
     """
+
     text = st.text_input(
         label,
-        value=format_tr_number(value, decimals),
+        value=format_tr_number(value),
         key=key
     )
 
@@ -85,6 +89,7 @@ factories = []
 # FACTORY INPUTS
 # -----------------------------
 st.subheader("Factory Inputs")
+
 cols = st.columns(n_factories)
 
 for i in range(n_factories):
@@ -100,43 +105,37 @@ for i in range(n_factories):
         reg_cost = formatted_number_input(
             f"{name} Regular Cost(TL/Ton)",
             6600.0,
-            key=f"reg_cost_{i}",
-            decimals=2
+            key=f"reg_cost_{i}"
         )
 
         ot_cost = formatted_number_input(
             f"{name} Overtime Cost(TL/Ton)",
             9900.0,
-            key=f"ot_cost_{i}",
-            decimals=2
+            key=f"ot_cost_{i}"
         )
 
         reg_cap = formatted_number_input(
             f"{name} Regular Capacity(Ton/Ay)",
             510.0,
-            key=f"reg_cap_{i}",
-            decimals=2
+            key=f"reg_cap_{i}"
         )
 
         ot_cap = formatted_number_input(
             f"{name} Overtime Capacity(Ton/Ay)",
             400.0,
-            key=f"ot_cap_{i}",
-            decimals=2
+            key=f"ot_cap_{i}"
         )
 
         stock = formatted_number_input(
             f"{name} Stock(Ton)",
             75.0,
-            key=f"stock_{i}",
-            decimals=2
+            key=f"stock_{i}"
         )
 
         scrap = formatted_number_input(
             f"{name} Scrap (%)",
             5.0,
-            key=f"scrap_{i}",
-            decimals=2
+            key=f"scrap_{i}"
         ) / 100
 
         factories.append({
@@ -158,15 +157,13 @@ st.subheader("Subcontract")
 sub_cost = formatted_number_input(
     "Subcontract Cost(TL/Ton)",
     15000.0,
-    key="sub_cost",
-    decimals=2
+    key="sub_cost"
 )
 
 sub_cap = formatted_number_input(
     "Subcontract Capacity(Ton/Ay)",
     0.0,
-    key="sub_cap",
-    decimals=2
+    key="sub_cap"
 )
 
 
@@ -180,8 +177,7 @@ use_inflation = st.checkbox("Apply Inflation")
 inflation_input = formatted_number_input(
     "Monthly Inflation (%)",
     2.0,
-    key="inflation_input",
-    decimals=2
+    key="inflation_input"
 )
 
 inflation_rate = inflation_input / 100
@@ -243,6 +239,7 @@ for i in range(len(df)):
         bo_flags.append(False)
 
     else:
+
         flag = st.checkbox(
             f"{period_name} → carry over",
             key=f"bo_{i}"
@@ -267,14 +264,16 @@ def run_model(df_input, scenario):
 
     if scenario == "decrease":
 
-        df["Demand"] = df["Demand"] * (
-            0.9 ** pd.Series(range(len(df)))
+        df["Demand"] = (
+            df["Demand"]
+            * (0.9 ** pd.Series(range(len(df))))
         )
 
     elif scenario == "increase":
 
-        df["Demand"] = df["Demand"] * (
-            1.1 ** pd.Series(range(len(df)))
+        df["Demand"] = (
+            df["Demand"]
+            * (1.1 ** pd.Series(range(len(df))))
         )
 
     carry = 0
@@ -606,10 +605,7 @@ for tab, scenario, title in [
         # -----------------------------
         st.metric(
             "Total Cost",
-            format_tr_number(
-                total_cost,
-                0
-            )
+            format_tr_number(total_cost)
         )
 
         # -----------------------------
@@ -624,10 +620,7 @@ for tab, scenario, title in [
         )
 
         styled = result.style.format({
-            col: lambda x: format_tr_number(
-                x,
-                0
-            )
+            col: lambda x: format_tr_number(x)
             for col in numeric_cols
         })
 
